@@ -25,9 +25,16 @@ independent morning/evening fades and exact-zero red-only gamma output.
   `LightBulb.Fork.exe`; original settings are imported once without modifying them.
   Do not run Ahead and original LightBulb simultaneously.
 
-This branch is based on upstream **2.7.2**. The latest locally tested Ahead package
-is **2.7.2.6**; no Ahead binary release is published yet. The upstream download links
-below install original LightBulb, not Ahead.
+This branch is based on upstream **2.7.2**. Ahead **2.7.2.6** is available for
+Windows x64:
+
+- [Installer](https://github.com/karipesonen/LightBulb-Ahead/releases/download/ahead-v2.7.2.6/LightBulb.Fork-Installer.exe)
+- [Portable ZIP](https://github.com/karipesonen/LightBulb-Ahead/releases/download/ahead-v2.7.2.6/LightBulb.Fork.win-x64.zip)
+- [Release notes and checksums](https://github.com/karipesonen/LightBulb-Ahead/releases/tag/ahead-v2.7.2.6)
+
+Exit original LightBulb before running Ahead. The packages are unsigned; Windows
+may show a security warning. The upstream download links below install original
+LightBulb, not Ahead.
 
 ## Build And Update Ahead
 
