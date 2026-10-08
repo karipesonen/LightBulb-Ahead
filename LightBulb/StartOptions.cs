@@ -29,8 +29,8 @@ public partial class StartOptions
                 IsInitiallyHiddenArgument,
                 StringComparer.OrdinalIgnoreCase
             ),
-            SettingsPath =
-                Environment.GetEnvironmentVariable("LIGHTBULB_SETTINGS_PATH") is { } path
+            SettingsPath = ValidateSettingsPath(
+                Environment.GetEnvironmentVariable("LIGHTBULB_FORK_SETTINGS_PATH") is { } path
                 && !string.IsNullOrWhiteSpace(path)
                     ? Path.EndsInDirectorySeparator(path) || Directory.Exists(path)
                         // Provided environment override, it's a directory path
@@ -46,10 +46,28 @@ public partial class StartOptions
                             "Settings.json"
                         )
                         // Can write to the program directory
-                        : Path.Combine(Program.ExecutableDirPath, "Settings.json"),
-            IsAutoUpdateAllowed = !(
-                Environment.GetEnvironmentVariable("LIGHTBULB_ALLOW_AUTO_UPDATE") is { } env
-                && env.Equals("false", StringComparison.OrdinalIgnoreCase)
+                        : Path.Combine(Program.ExecutableDirPath, "Settings.json")
             ),
+            IsAutoUpdateAllowed = false,
         };
+
+    internal static string ValidateSettingsPath(string path)
+    {
+        var fullPath = Path.GetFullPath(path);
+        var originalDirectory = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "LightBulb"
+        );
+        if (
+            fullPath.Equals(originalDirectory, StringComparison.OrdinalIgnoreCase)
+            || fullPath.StartsWith(
+                originalDirectory + Path.DirectorySeparatorChar,
+                StringComparison.OrdinalIgnoreCase
+            )
+        )
+            throw new InvalidOperationException(
+                "Fork settings cannot use the original LightBulb directory."
+            );
+        return fullPath;
+    }
 }

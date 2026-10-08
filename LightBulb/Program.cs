@@ -1,8 +1,10 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Threading;
 using Avalonia;
+using Avalonia.Threading;
 using LightBulb.PlatformInterop;
 
 namespace LightBulb;
@@ -15,7 +17,14 @@ public static class Program
 
     public static Version Version { get; } = Assembly.GetName().Version ?? new Version(0, 0, 0);
 
-    public static string VersionString { get; } = Version.ToString(3);
+    public static string VersionString { get; } =
+        Version.ToString(4)
+        + " (upstream "
+        + Assembly
+            .GetCustomAttributes<AssemblyMetadataAttribute>()
+            .FirstOrDefault(a => a.Key == "UpstreamRef")
+            ?.Value
+        + ")";
 
     public static bool IsDevelopmentBuild { get; } = Version.Major is <= 0 or >= 999;
 
@@ -48,6 +57,15 @@ public static class Program
     [STAThread]
     public static int Main(string[] args)
     {
+        var exitEventName = $"Local\\{Name}_Exit";
+        if (args.Contains("--exit", StringComparer.OrdinalIgnoreCase))
+        {
+            if (!EventWaitHandle.TryOpenExisting(exitEventName, out var existingExitEvent))
+                return 1;
+            using (existingExitEvent)
+                existingExitEvent.Set();
+            return 0;
+        }
         // Ensure only one instance of the app is running at a time
         using var identityMutex = new Mutex(
             true,
@@ -57,6 +75,15 @@ public static class Program
 
         if (!isOnlyRunningInstance)
             return 1;
+
+        using var exitEvent = new EventWaitHandle(false, EventResetMode.ManualReset, exitEventName);
+        var exitRegistration = ThreadPool.RegisterWaitForSingleObject(
+            exitEvent,
+            (_, _) => Dispatcher.UIThread.Post(() => App.Shutdown()),
+            null,
+            Timeout.Infinite,
+            true
+        );
 
         // Build and run the app
         var builder = BuildAvaloniaApp();
@@ -72,6 +99,7 @@ public static class Program
         }
         finally
         {
+            exitRegistration.Unregister(null);
             // Clean up after application shutdown
             if (builder.Instance is IDisposable disposableApp)
                 disposableApp.Dispose();

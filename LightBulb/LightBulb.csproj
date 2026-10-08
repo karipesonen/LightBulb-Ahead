@@ -1,12 +1,17 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
+    <AssemblyName>LightBulb.Fork</AssemblyName>
+    <Version>2.7.2.1</Version>
+    <UpstreamRef Condition="'$(UpstreamRef)' == ''">2.7.2</UpstreamRef>
     <ApplicationIcon>../favicon.ico</ApplicationIcon>
     <PublishTrimmed>true</PublishTrimmed>
     <CopyOutputSymbolsToPublishDirectory>false</CopyOutputSymbolsToPublishDirectory>
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="LightBulb.Core.Tests" />
+    <AssemblyMetadata Include="UpstreamRef" Value="$(UpstreamRef)" />
     <AvaloniaResource Include="../favicon.ico" Link="favicon.ico" />
   </ItemGroup>
 

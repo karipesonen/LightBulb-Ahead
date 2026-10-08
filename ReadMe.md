@@ -1,3 +1,55 @@
+# LightBulb Ahead
+
+A Windows fork of [Tyrrrz/LightBulb](https://github.com/Tyrrrz/LightBulb) with
+independent morning/evening fades and exact-zero red-only gamma output.
+
+## Changes From Upstream
+
+- **Independent sunrise and sunset timing:** each fade has its own duration and
+  target finish offset. Negative offsets finish before the solar event; positive
+  offsets finish after it.
+- **Long fades without the old limits:** requested durations are preserved. When
+  fades would overlap, the effective duration is shortened to fit between target
+  finishes, with the actual start/finish and shortening shown in settings.
+- **Red-only at 500 K:** green and blue gamma ramps stay exactly zero, including
+  driver refreshes. Naturally zero channels are preserved at every temperature;
+  nonzero channels keep the upstream color mapping and refresh workaround.
+- **Reliable small endpoint changes:** crossing zero/nonzero channels forces an
+  update even below the old temperature/brightness significance thresholds.
+- **Dated schedules:** runtime and cycle preview share resolved intervals across
+  midnight and daylight-saving changes. Missing polar solar events use saved manual
+  times with an explicit fallback notice.
+- **Simpler fade settings:** separate morning/evening controls, clock-only timing
+  summaries, no fade sliders, and no fractional-second noise in summaries.
+- **Separate installation and settings:** the executable is still named
+  `LightBulb.Fork.exe`; original settings are imported once without modifying them.
+  Do not run Ahead and original LightBulb simultaneously.
+
+This branch is based on upstream **2.7.2**. The latest locally tested Ahead package
+is **2.7.2.6**; no Ahead binary release is published yet. The upstream download links
+below install original LightBulb, not Ahead.
+
+## Build And Update Ahead
+
+See [the local build/update guide](scripts/README.md) for packaging, source updates
+in isolated worktrees, verified installation, and settings-preserving rollback.
+Vanilla upstream binary auto-updates are disabled so they cannot replace Ahead.
+
+Duration examples: `02:30:00` is 2 hours 30 minutes; `1.06:00:00` is 30 hours.
+Durations over 24 hours use an explicit day component. Dates are omitted from UI
+timing summaries; a fade can start on the preceding day.
+
+Verification: **80 tests passed** on Windows; installed checks covered gamma-ramp
+readback, all refresh offsets, small zero-channel crossings, long-fade UI/preview,
+pause/resume, normal exit, sleep/wake with polling on/off, and local update/rollback.
+A non-no-op upstream merge was built and tested separately. SDR is the supported
+target; HDR and external-monitor reconnection are not verified. Zero digital gamma
+entries do not guarantee zero measured spectral emission.
+
+## Original Project Documentation
+
+The following documentation, credits, and download links are from upstream.
+
 # LightBulb
 
 [![Status](https://img.shields.io/badge/status-maintenance-ffd700.svg)](https://github.com/Tyrrrz/.github/blob/prime/docs/project-status.md)

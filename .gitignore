@@ -11,3 +11,5 @@ Installer/Source/
 
 # Test results
 TestResults/
+artifacts/
+.worktrees/
