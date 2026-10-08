@@ -10,11 +10,12 @@ public readonly record struct SolarTimes(TimeOnly Sunrise, TimeOnly Sunset)
 
     private static double RadiansToDegrees(double radians) => radians * 180 / Math.PI;
 
-    private static TimeOnly CalculateSolarTime(
+    private static double? CalculateUtcHours(
         GeoLocation location,
         DateTimeOffset instant,
         double zenith,
-        bool isSunrise
+        bool isSunrise,
+        bool clampAbsentEvents
     )
     {
         // Based on https://edwilliams.org/sunrise_sunset_algorithm.htm
@@ -49,16 +50,17 @@ public readonly record struct SolarTimes(TimeOnly Sunrise, TimeOnly Sunset)
         var cosDec = Math.Cos(Math.Asin(sinDec));
 
         // Calculate Sun's zenith local hour
-        var sunLocalHoursCos = Math.Clamp(
+        var sunLocalHoursCos =
             (
                 Math.Cos(DegreesToRadians(zenith))
                 - sinDec * Math.Sin(DegreesToRadians(location.Latitude))
-            ) / (cosDec * Math.Cos(DegreesToRadians(location.Latitude))),
-            // The result may be invalid in case the Sun never reaches zenith,
-            // so we clamp to get the closest point instead.
-            -1,
-            1
-        );
+            ) / (cosDec * Math.Cos(DegreesToRadians(location.Latitude)));
+        if (!double.IsFinite(sunLocalHoursCos) || sunLocalHoursCos is < -1 or > 1)
+        {
+            if (!clampAbsentEvents)
+                return null;
+            sunLocalHoursCos = Math.Clamp(sunLocalHoursCos, -1, 1);
+        }
 
         // Calculate the local time of Sun's highest point
         var sunLocalHours =
@@ -72,18 +74,48 @@ public readonly record struct SolarTimes(TimeOnly Sunrise, TimeOnly Sunset)
         var meanHours = sunLocalHours + sunRightAscHours - 0.06571 * timeApproxDays - 6.622;
 
         // Adjust mean time to UTC
-        var utcHours = (meanHours - lngHours).Wrap(0, 24);
-
-        // Adjust UTC time to local time
-        // (we use the provided offset because it's impossible to calculate timezone from coordinates)
-        var localHours = (utcHours + instant.Offset.TotalHours).Wrap(0, 24);
-
-        return TimeOnly.FromTimeSpan(TimeSpan.FromHours(localHours));
+        return (meanHours - lngHours).Wrap(0, 24);
     }
+
+    private static TimeOnly CalculateSolarTime(
+        GeoLocation location,
+        DateTimeOffset instant,
+        bool isSunrise
+    ) =>
+        TimeOnly.FromTimeSpan(
+            TimeSpan.FromHours(
+                (
+                    CalculateUtcHours(location, instant, 90.83, isSunrise, true)!.Value
+                    + instant.Offset.TotalHours
+                ).Wrap(0, 24)
+            )
+        );
 
     public static SolarTimes Calculate(GeoLocation location, DateTimeOffset instant) =>
         new(
-            CalculateSolarTime(location, instant, 90.83, true),
-            CalculateSolarTime(location, instant, 90.83, false)
+            CalculateSolarTime(location, instant, true),
+            CalculateSolarTime(location, instant, false)
         );
+
+    public static DateTimeOffset? CalculateEvent(
+        GeoLocation location,
+        DateOnly date,
+        TimeZoneInfo timeZone,
+        bool isSunrise
+    )
+    {
+        var midnightUtc = new DateTimeOffset(date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc));
+        var hours = CalculateUtcHours(location, midnightUtc, 90.83, isSunrise, false);
+        if (hours is null)
+            return null;
+        var utcEvent = midnightUtc.AddHours(hours.Value);
+        // UTC's wrapped clock may belong to the previous/next local calendar day.
+        for (var delta = -1; delta <= 1; delta++)
+        {
+            var localEvent = TimeZoneInfo.ConvertTime(utcEvent.AddDays(delta), timeZone);
+            if (DateOnly.FromDateTime(localEvent.DateTime) == date)
+                return localEvent;
+        }
+        throw new ArgumentException("Unable to resolve solar event in the selected timezone.");
+    }
 }

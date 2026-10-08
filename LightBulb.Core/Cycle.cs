@@ -3,7 +3,7 @@ using LightBulb.Core.Utils.Extensions;
 
 namespace LightBulb.Core;
 
-public static class Cycle
+public static partial class Cycle
 {
     public static TimeOnly GetSunriseStart(
         TimeOnly sunrise,
