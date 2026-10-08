@@ -67,6 +67,7 @@
         TickFrequency="20"
         Value="{Binding NightTemperature}"
       />
+      <TextBlock Text="{Binding LocalizationManager.RedOnlyHelp}" TextWrapping="Wrap" />
     </StackPanel>
 
     <!--  Day brightness  -->
@@ -139,62 +140,71 @@
       />
     </StackPanel>
 
-    <!--  Configuration transition duration  -->
+    <TextBlock IsVisible="{Binding HasScheduleError}" Text="{Binding ScheduleError}" TextWrapping="Wrap" Foreground="OrangeRed" />
+
     <StackPanel Orientation="Vertical" Spacing="12">
-      <Grid
-        ColumnDefinitions="*,Auto"
-        ToolTip.Tip="{Binding LocalizationManager.TransitionDurationTooltip}"
-      >
+      <TextBlock Text="{Binding LocalizationManager.MorningFadeLabel}" FontWeight="SemiBold" />
+      <Grid ColumnDefinitions="*,Auto">
         <TextBlock
           Grid.Column="0"
           VerticalAlignment="Center"
-          Text="{Binding LocalizationManager.TransitionDurationLabel}"
+          Text="{Binding LocalizationManager.FadeDurationLabel}"
           TextTrimming="CharacterEllipsis"
         />
         <TextBox
           Grid.Column="1"
           MinWidth="48"
           VerticalAlignment="Center"
-          Text="{Binding ConfigurationTransitionDuration, Converter={x:Static converters:TimeSpanToDurationStringConverter.Instance}, UpdateSourceTrigger=LostFocus}"
+          Text="{Binding MorningDuration, Converter={x:Static converters:TimeSpanToDurationStringConverter.Instance}, UpdateSourceTrigger=LostFocus}"
           Theme="{DynamicResource CompactTextBox}"
         />
       </Grid>
-      <Slider
-        LargeChange="0.5"
-        Maximum="3"
-        Minimum="0"
-        SmallChange="0.08"
-        Value="{Binding ConfigurationTransitionDuration, Converter={x:Static converters:TimeSpanToHoursDoubleConverter.Instance}}"
-      />
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBlock
+          VerticalAlignment="Center"
+          Text="{Binding LocalizationManager.FadeFinishOffsetLabel}"
+        />
+        <TextBox
+          Grid.Column="1"
+          MinWidth="48"
+          Text="{Binding MorningFinishOffsetText, UpdateSourceTrigger=LostFocus}"
+          Theme="{DynamicResource CompactTextBox}"
+        />
+      </Grid>
+      <TextBlock Text="{Binding MorningScheduleSummary}" TextWrapping="Wrap" />
     </StackPanel>
 
-    <!--  Configuration transition offset  -->
     <StackPanel Orientation="Vertical" Spacing="12">
-      <Grid
-        ColumnDefinitions="*,Auto"
-        ToolTip.Tip="{Binding LocalizationManager.TransitionOffsetTooltip}"
-      >
+      <TextBlock Text="{Binding LocalizationManager.EveningFadeLabel}" FontWeight="SemiBold" />
+      <Grid ColumnDefinitions="*,Auto">
         <TextBlock
           Grid.Column="0"
           VerticalAlignment="Center"
-          Text="{Binding LocalizationManager.TransitionOffsetLabel}"
+          Text="{Binding LocalizationManager.FadeDurationLabel}"
           TextTrimming="CharacterEllipsis"
         />
         <TextBox
           Grid.Column="1"
           MinWidth="24"
           VerticalAlignment="Center"
-          Text="{Binding ConfigurationTransitionOffset, Converter={x:Static converters:FractionToPercentageStringConverter.Instance}, UpdateSourceTrigger=LostFocus}"
+          Text="{Binding EveningDuration, Converter={x:Static converters:TimeSpanToDurationStringConverter.Instance}, UpdateSourceTrigger=LostFocus}"
           Theme="{DynamicResource CompactTextBox}"
         />
       </Grid>
-      <Slider
-        LargeChange="0.05"
-        Maximum="1"
-        Minimum="0"
-        SmallChange="0.01"
-        Value="{Binding ConfigurationTransitionOffset}"
-      />
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBlock
+          VerticalAlignment="Center"
+          Text="{Binding LocalizationManager.FadeFinishOffsetLabel}"
+        />
+        <TextBox
+          Grid.Column="1"
+          MinWidth="48"
+          Text="{Binding EveningFinishOffsetText, UpdateSourceTrigger=LostFocus}"
+          Theme="{DynamicResource CompactTextBox}"
+        />
+      </Grid>
+      <TextBlock Text="{Binding EveningScheduleSummary}" TextWrapping="Wrap" />
     </StackPanel>
+    <TextBlock Text="{Binding LocalizationManager.FadeOffsetHelp}" TextWrapping="Wrap" />
   </StackPanel>
 </UserControl>

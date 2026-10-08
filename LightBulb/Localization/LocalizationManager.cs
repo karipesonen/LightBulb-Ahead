@@ -84,6 +84,16 @@ public partial class LocalizationManager : ObservableObject, IDisposable
 
 public partial class LocalizationManager
 {
+    public string MorningFadeLabel => Get();
+    public string EveningFadeLabel => Get();
+    public string FadeDurationLabel => Get();
+    public string FadeFinishOffsetLabel => Get();
+    public string FadeOffsetHelp => Get();
+    public string FadeSummary => Get();
+    public string FadeShortened => Get();
+    public string SolarFallback => Get();
+    public string RedOnlyHelp => Get();
+
     // ---- Dashboard ----
 
     public string SunsetLabel => Get();

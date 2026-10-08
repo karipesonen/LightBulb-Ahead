@@ -1,5 +1,6 @@
 using System;
 using System.Globalization;
+using Avalonia.Data;
 using Avalonia.Data.Converters;
 
 namespace LightBulb.Converters;
@@ -13,7 +14,7 @@ public class TimeSpanToDurationStringConverter : IValueConverter
         Type targetType,
         object? parameter,
         CultureInfo culture
-    ) => value is TimeSpan timeSpanValue ? timeSpanValue.ToString(@"hh\:mm\:ss", culture) : default;
+    ) => value is TimeSpan timeSpanValue ? timeSpanValue.ToString("c", culture) : default;
 
     public object ConvertBack(
         object? value,
@@ -23,5 +24,8 @@ public class TimeSpanToDurationStringConverter : IValueConverter
     ) =>
         value is string stringValue && TimeSpan.TryParse(stringValue, culture, out var result)
             ? result
-            : default;
+            : new BindingNotification(
+                new FormatException("Enter a duration as [days.]hours:minutes:seconds."),
+                BindingErrorType.DataValidationError
+            );
 }

@@ -34,6 +34,41 @@ public partial class DashboardViewModel : ViewModelBase
     private IDisposable? _enableAfterDelayRegistration;
     private ColorConfiguration? _configurationSmoothingSource;
     private ColorConfiguration? _configurationSmoothingTarget;
+    private (DateOnly Date, ScheduleConfiguration Configuration, TimeZoneInfo Zone)? _scheduleKey;
+    private ResolvedSchedule? _schedule;
+    private string? _scheduleError;
+
+    private ResolvedSchedule Schedule
+    {
+        get
+        {
+            var zone = TimeZoneInfo.Local;
+            var date = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(Instant, zone).DateTime);
+            var configuration = _settingsService.ScheduleConfiguration;
+            var key = (date, configuration, zone);
+            if (_scheduleKey == key && _schedule is not null)
+                return _schedule;
+            try
+            {
+                _schedule = configuration.Resolve(Instant, zone);
+                _scheduleKey = key;
+                _scheduleError = null;
+            }
+            catch (Exception error) when (error is ArgumentException or OverflowException)
+            {
+                _scheduleError = error.Message;
+                _schedule ??= new ScheduleConfiguration(
+                    new FadeSettings(TimeSpan.FromMinutes(40), TimeSpan.Zero),
+                    new FadeSettings(TimeSpan.FromMinutes(40), TimeSpan.FromMinutes(40)),
+                    null,
+                    new TimeOnly(7, 20),
+                    new TimeOnly(16, 30)
+                ).Resolve(Instant, zone);
+                _scheduleKey = key;
+            }
+            return _schedule;
+        }
+    }
 
     public DashboardViewModel(
         SettingsService settingsService,
@@ -132,6 +167,7 @@ public partial class DashboardViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(SunsetTransitionTooltip))]
     [NotifyPropertyChangedFor(nameof(TargetConfiguration))]
     [NotifyPropertyChangedFor(nameof(CycleState))]
+    [NotifyPropertyChangedFor(nameof(StatusText))]
     public partial DateTimeOffset Instant { get; set; } = DateTimeOffset.Now;
 
     [ObservableProperty]
@@ -156,50 +192,48 @@ public partial class DashboardViewModel : ViewModelBase
         ColorConfiguration.Default;
 
     public SolarTimes SolarTimes =>
-        _settingsService is { IsManualSunriseSunsetEnabled: false, Location: { } location }
-            ? SolarTimes.Calculate(location, Instant)
-            : new SolarTimes(_settingsService.ManualSunrise, _settingsService.ManualSunset);
+        new(
+            TimeOnly.FromDateTime(Schedule.Today.Sunrise.DateTime),
+            TimeOnly.FromDateTime(Schedule.Today.Sunset.DateTime)
+        );
 
     public TimeOnly SunriseStart =>
-        Cycle.GetSunriseStart(
-            SolarTimes.Sunrise,
-            _settingsService.ConfigurationTransitionDuration,
-            _settingsService.ConfigurationTransitionOffset
+        TimeOnly.FromDateTime(
+            TimeZoneInfo.ConvertTime(Schedule.Morning.Start, TimeZoneInfo.Local).DateTime
         );
 
     public TimeOnly SunriseEnd =>
-        Cycle.GetSunriseEnd(
-            SolarTimes.Sunrise,
-            _settingsService.ConfigurationTransitionDuration,
-            _settingsService.ConfigurationTransitionOffset
+        TimeOnly.FromDateTime(
+            TimeZoneInfo.ConvertTime(Schedule.Morning.Finish, TimeZoneInfo.Local).DateTime
         );
 
     public TimeOnly SunsetStart =>
-        Cycle.GetSunsetStart(
-            SolarTimes.Sunset,
-            _settingsService.ConfigurationTransitionDuration,
-            _settingsService.ConfigurationTransitionOffset
+        TimeOnly.FromDateTime(
+            TimeZoneInfo.ConvertTime(Schedule.Evening.Start, TimeZoneInfo.Local).DateTime
         );
 
     public TimeOnly SunsetEnd =>
-        Cycle.GetSunsetEnd(
-            SolarTimes.Sunset,
-            _settingsService.ConfigurationTransitionDuration,
-            _settingsService.ConfigurationTransitionOffset
+        TimeOnly.FromDateTime(
+            TimeZoneInfo.ConvertTime(Schedule.Evening.Finish, TimeZoneInfo.Local).DateTime
         );
 
-    public string SunsetTransitionTooltip =>
-        string.Format(
-            LocalizationManager.SunsetTransitionTooltip,
-            SunsetStart.ToString(CultureInfo.CurrentCulture),
-            SunsetEnd.ToString(CultureInfo.CurrentCulture)
-        );
+    public string SunsetTransitionTooltip => FormatFade(Schedule.Evening);
 
-    public string SunriseTransitionTooltip =>
+    public string SunriseTransitionTooltip => FormatFade(Schedule.Morning);
+
+    private string FormatFade(ResolvedFade fade) =>
         string.Format(
-            LocalizationManager.SunriseTransitionTooltip,
-            SunriseStart.ToString(CultureInfo.CurrentCulture),
-            SunriseEnd.ToString(CultureInfo.CurrentCulture)
+            CultureInfo.CurrentCulture,
+            LocalizationManager.FadeSummary,
+            TimeZoneInfo.ConvertTime(fade.Start, TimeZoneInfo.Local).ToString("g"),
+            TimeZoneInfo.ConvertTime(fade.Finish, TimeZoneInfo.Local).ToString("g"),
+            fade.RequestedDuration,
+            fade.EffectiveDuration
+        )
+        + (
+            fade.IsShortened
+                ? Environment.NewLine + LocalizationManager.FadeShortened
+                : string.Empty
         );
 
     public bool IsOffsetEnabled => Math.Abs(TemperatureOffset) + Math.Abs(BrightnessOffset) >= 0.01;
@@ -208,11 +242,9 @@ public partial class DashboardViewModel : ViewModelBase
         IsActive
             ? Cycle
                 .InterpolateConfiguration(
-                    SolarTimes,
+                    Schedule.Fades,
                     _settingsService.DayConfiguration,
                     _settingsService.NightConfiguration,
-                    _settingsService.ConfigurationTransitionDuration,
-                    _settingsService.ConfigurationTransitionOffset,
                     Instant
                 )
                 .WithOffset(TemperatureOffset, BrightnessOffset)
@@ -251,7 +283,13 @@ public partial class DashboardViewModel : ViewModelBase
                     + " / "
                     + CurrentConfiguration.Brightness.ToString("P0")
                 : LocalizationManager.TrayTooltipDisabled
-        );
+        )
+        + (
+            Schedule.Today.IsManualFallback
+                ? Environment.NewLine + LocalizationManager.SolarFallback
+                : string.Empty
+        )
+        + (_scheduleError is not null ? Environment.NewLine + _scheduleError : string.Empty);
 
     private void RegisterHotKeys()
     {
@@ -460,7 +498,29 @@ public partial class DashboardViewModel : ViewModelBase
     private void DisableUntilSunrise()
     {
         var now = DateTimeOffset.Now;
-        var timeUntilSunrise = SolarTimes.Sunrise.NextAfter(now) - now;
+        var zone = TimeZoneInfo.Local;
+        var date = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(now, zone).DateTime);
+        var configuration = _settingsService.ScheduleConfiguration;
+        var sunrise = SolarDay
+            .Resolve(
+                date,
+                zone,
+                configuration.Location,
+                configuration.ManualSunrise,
+                configuration.ManualSunset
+            )
+            .Sunrise;
+        if (sunrise <= now)
+            sunrise = SolarDay
+                .Resolve(
+                    date.AddDays(1),
+                    zone,
+                    configuration.Location,
+                    configuration.ManualSunrise,
+                    configuration.ManualSunset
+                )
+                .Sunrise;
+        var timeUntilSunrise = sunrise - now;
         DisableTemporarily(timeUntilSunrise);
     }
 

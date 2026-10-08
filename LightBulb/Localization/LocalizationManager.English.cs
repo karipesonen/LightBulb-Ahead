@@ -7,6 +7,16 @@ public partial class LocalizationManager
     private static readonly IReadOnlyDictionary<string, string> EnglishLocalization =
         new Dictionary<string, string>
         {
+            [nameof(MorningFadeLabel)] = "Morning (sunrise)",
+            [nameof(EveningFadeLabel)] = "Evening (sunset)",
+            [nameof(FadeDurationLabel)] = "Requested fade duration:",
+            [nameof(FadeFinishOffsetLabel)] = "Target finish offset (minutes):",
+            [nameof(FadeOffsetHelp)] =
+                "Negative = before sunrise/sunset; positive = after.",
+            [nameof(FadeSummary)] = "Start {0}; finish {1}\nRequested {2}; actual {3}",
+            [nameof(FadeShortened)] = "Shortened to fit after the preceding target finish.",
+            [nameof(SolarFallback)] = "Solar events unavailable: using saved manual times.",
+            [nameof(RedOnlyHelp)] = "500 K is red-only: green and blue gamma channels are zero.",
             // Dashboard
             [nameof(SunsetLabel)] = "Sunset",
             [nameof(SunriseLabel)] = "Sunrise",

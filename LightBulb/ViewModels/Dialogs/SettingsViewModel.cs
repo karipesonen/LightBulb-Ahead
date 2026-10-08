@@ -61,6 +61,8 @@ public partial class SettingsViewModel : DialogViewModelBase
     [RelayCommand]
     private void Save()
     {
+        if (_settingsService.ScheduleError is not null)
+            return;
         _settingsService.Save();
         Close(true);
     }
