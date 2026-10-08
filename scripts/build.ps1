@@ -57,6 +57,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Publish failed; candidate will not be packaged.' }
     if ((Get-SourceFingerprint) -ne $fingerprint) { throw 'Source changed during publish; refusing installer compilation.' }
     if (!(Test-Path -LiteralPath (Join-Path $app 'LightBulb.Fork.exe'))) { throw 'Fork executable missing from published output.' }
+    Copy-Item -LiteralPath (Join-Path $root 'License.txt') -Destination $app
     $env:INSTALLER_SOURCE_DIR = $app
     $env:INSTALLER_OUTPUT_DIR = $staging
     $env:INSTALLER_APP_VERSION = $Version
