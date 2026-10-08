@@ -35,6 +35,7 @@ Windows x64:
 Exit original LightBulb before running Ahead. The packages are unsigned; Windows
 may show a security warning. The upstream download links below install original
 LightBulb, not Ahead.
+Both packages include the .NET runtime; no separate SDK installation is needed.
 
 ## Build And Update Ahead
 
